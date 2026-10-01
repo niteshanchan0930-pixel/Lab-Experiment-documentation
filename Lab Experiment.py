@@ -163,31 +163,18 @@ elif page == "3. Checker / Mentor Review":
     if st.button("Save Evaluation"):
         st.success(f"Status updated to: {st.session_state['mentor_status']}")
 
-# ==========================================
-# SECTION 4: PRINT / SUBMISSION PREVIEW
-# ==========================================
+# ==============================================================================
+# SECTION 4: PRINT & SUBMISSION PREVIEW
+# ==============================================================================
 elif page == "4. Print & Submission Preview":
-    st.header("📄 Experiment Report Preview")
-    st.write("Review the complete practical document before final submission.")
+    st.header("🖨️ Print & Submission Preview")
     
-    st.markdown("---")
-    st.markdown(f"### *Aim:*\n{st.session_state['aim']}")
-    
-    st.markdown("### *Systematic Literature Search & Scope:*")
-    st.markdown(f"- *Search Query:* {st.session_state['lit_query']}")
-    st.markdown(f"- *Databases:* {st.session_state['lit_databases']}")
-    st.markdown(f"- *Model Drugs:* {st.session_state['lit_drugs']}")
-    st.markdown(f"- *Formulation Types:* {st.session_state['lit_formulations']}")
-    st.markdown(f"- *Target Indications:* {st.session_state['lit_diseases']}")
-    st.markdown(f"- *Criteria:*\n{st.session_state['lit_criteria']}")
-    st.markdown(f"- *Findings & Theory:*\n{st.session_state['lit_summary']}")
-    st.markdown(f"- *Research Gaps Identified:*\n{st.session_state['lit_gaps']}")
-    st.markdown(f"- *Future Prospects:*\n{st.session_state['lit_prospects']}")
-    
-    st.markdown(f"### *Materials:*\n{st.session_state['materials']}")
-    st.markdown(f"### *Method:*\n{st.session_state['method']}")
-    
-  st.markdown("### Results & Data:")
+    st.markdown(f"Aim: {st.session_state.get('aim', 'N/A')}")
+    st.markdown(f"Materials: {st.session_state.get('materials', 'N/A')}")
+    st.markdown(f"Method: {st.session_state.get('method', 'N/A')}")
+
+    # Line 190 - Make sure there are 4 spaces before st.markdown
+    st.markdown("### Results & Data:")
     
     if "results_df" in st.session_state and st.session_state["results_df"] is not None:
         df = st.session_state["results_df"].copy()
