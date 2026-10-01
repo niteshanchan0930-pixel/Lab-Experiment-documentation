@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-
+import requests 
 # Page Configuration
 st.set_page_config(
     page_title="Experiment Dashboard - Practicals",
@@ -175,7 +175,82 @@ elif page == "4. Print & Submission Preview":
     st.markdown("---")
     st.markdown(f"*Mentor Status:* {st.session_state['mentor_status']}")
     st.markdown(f"*Mentor Comments:* {st.session_state['mentor_comments']}")
+# ==============================================================================
+    # EXPORT / SAVE REPORT FEATURE
+    # ==============================================================================
+    st.markdown("---")
+    st.subheader("💾 Export & Save Record")
+    st.write("Download a permanent copy of your compiled practical logbook and evaluation report.")
 
+    # 1. Compile all Session State entries into a clean text document
+    compiled_report = f"""
+================================================================================
+                    PHARMACEUTICS PRACTICAL LOGBOOK & REPORT
+================================================================================
+
+1. EXPERIMENTAL PROTOCOL
+--------------------------------------------------------------------------------
+Aim:
+{st.session_state.get('aim', 'N/A')}
+
+Target Drug(s) / APIs:
+{st.session_state.get('lit_drugs', 'N/A')}
+
+2. SYSTEMATIC LITERATURE SEARCH & GAP ANALYSIS
+--------------------------------------------------------------------------------
+Search Query / Keywords:
+{st.session_state.get('lit_query', 'N/A')}
+
+Literature Summary:
+{st.session_state.get('lit_summary', 'N/A')}
+
+Identified Research Gaps & Rationale:
+{st.session_state.get('lit_gaps', 'N/A')}
+
+3. MENTOR REVIEW & VERIFICATION STATUS
+--------------------------------------------------------------------------------
+Verification Status : {st.session_state.get('mentor_status', 'Pending Review')}
+Mentor Comments     : {st.session_state.get('mentor_comments', 'No comments added.')}
+
+================================================================================
+Generated via Pharmaceutics Practical Dashboard
+================================================================================
+"""
+
+    # 2. Add Download Buttons for TXT and CSV summary formats
+    col_dl1, col_dl2 = st.columns(2)
+
+    with col_dl1:
+        st.download_button(
+            label="📄 Download Full Report (.txt)",
+            data=compiled_report,
+            file_name="Pharmaceutics_Practical_Report.txt",
+            mime="text/plain",
+            use_container_width=True
+        )
+
+    with col_dl2:
+        # Create a summary CSV format for record keeping
+        summary_data = {
+            "Field": ["Aim", "Target Drugs", "Literature Summary", "Research Gaps", "Mentor Status"],
+            "Value": [
+                st.session_state.get('aim', 'N/A'),
+                st.session_state.get('lit_drugs', 'N/A'),
+                st.session_state.get('lit_summary', 'N/A'),
+                st.session_state.get('lit_gaps', 'N/A'),
+                st.session_state.get('mentor_status', 'Pending Review')
+            ]
+        }
+        df_summary = pd.DataFrame(summary_data)
+        csv_data = df_summary.to_csv(index=False)
+
+        st.download_button(
+            label="📊 Download Summary Table (.csv)",
+            data=csv_data,
+            file_name="Pharmaceutics_Practical_Summary.csv",
+            mime="text/csv",
+            use_container_width=True
+        )
 # ==========================================
 # SECTION 5: POWER BI INTEGRATION
 # ==========================================
