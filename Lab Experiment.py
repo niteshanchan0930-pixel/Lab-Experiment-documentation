@@ -105,37 +105,43 @@ elif page == "2. Results & Data Upload":
             else:
                 df = pd.read_excel(uploaded_file)
             
-            # Save raw dataframe to session state
             st.session_state["results_df"] = df
             st.success("File uploaded successfully!")
         except Exception as e:
             st.error(f"Error reading file: {e}")
 
-    # Display Data & Plot Chart
-    if "results_df" in st.session_state:
-        df = st.session_state["results_df"]
+    # --- PASTE THE CLEAN PLOTTING CODE HERE ---
+    if "results_df" in st.session_state and st.session_state["results_df"] is not None:
+        df = st.session_state["results_df"].copy()
         
+        # Display Raw Data Frame
         st.subheader("📋 Uploaded Data Table")
         st.dataframe(df, use_container_width=True)
         
-        st.subheader("📈 Interactive Release / Calibration Curve")
+        # 1. Clean the dataframe: drop completely empty rows and columns
+        df_clean = df.dropna(how="all").dropna(axis=1, how="all")
         
-        # Filter for numeric-only columns to avoid Streamlit plot crashes
-        numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
+        # 2. Extract only numeric columns for plotting
+        numeric_df = df_clean.select_dtypes(include=["number"])
         
-        if len(numeric_cols) >= 2:
-            x_axis = st.selectbox("Select X-Axis (e.g., Time / Concentration):", numeric_cols, index=0)
-            y_axis = st.selectbox("Select Y-Axis (e.g., % Release / Absorbance):", numeric_cols, index=min(1, len(numeric_cols)-1))
+        if not numeric_df.empty:
+            st.subheader("📈 Dissolution / Calibration Curve")
             
-            # Clean data: drop rows where selected X or Y values are missing
-            chart_data = df[[x_axis, y_axis]].dropna().set_index(x_axis)
-            st.line_chart(chart_data)
-        elif len(numeric_cols) == 1:
-            st.line_chart(df[numeric_cols].dropna())
+            # If the original dataframe has a time or concentration column, use it as X-axis
+            possible_x = [col for col in df_clean.columns if any(k in str(col).lower() for k in ["time", "conc", "min", "hr", "ug"])]
+            
+            if possible_x:
+                x_col = possible_x[0]
+                plot_data = numeric_df.copy()
+                plot_data[x_col] = pd.to_numeric(df_clean[x_col], errors="coerce")
+                plot_data = plot_data.dropna(subset=[x_col]).set_index(x_col)
+                st.line_chart(plot_data)
+            else:
+                st.line_chart(numeric_df)
         else:
-            st.warning("No pure numeric columns detected in the uploaded file to generate a chart. Please check your Excel formatting.")
+            st.warning("No numeric data columns found in the uploaded file to render a chart.")
     else:
-        st.info("No data file uploaded yet.")
+        st.info("No experimental data uploaded yet.")
 # ==========================================
 # SECTION 3: CHECKER / MENTOR
 # ==========================================
@@ -181,16 +187,29 @@ elif page == "4. Print & Submission Preview":
     st.markdown(f"### *Materials:*\n{st.session_state['materials']}")
     st.markdown(f"### *Method:*\n{st.session_state['method']}")
     
-    st.markdown("### *Results & Data:*")
-    if "results_df" in st.session_state:
-        st.dataframe(st.session_state["results_df"])
-        st.line_chart(st.session_state["results_df"].set_index(st.session_state["results_df"].columns[0]))
+  st.markdown("### Results & Data:")
+    
+    if "results_df" in st.session_state and st.session_state["results_df"] is not None:
+        df = st.session_state["results_df"].copy()
+        
+        st.dataframe(df, use_container_width=True)
+        
+        df_clean = df.dropna(how="all").dropna(axis=1, how="all")
+        numeric_df = df_clean.select_dtypes(include=["number"])
+        
+        if not numeric_df.empty:
+            possible_x = [col for col in df_clean.columns if any(k in str(col).lower() for k in ["time", "conc", "min", "hr", "ug"])]
+            
+            if possible_x:
+                x_col = possible_x[0]
+                plot_data = numeric_df.copy()
+                plot_data[x_col] = pd.to_numeric(df_clean[x_col], errors="coerce")
+                plot_data = plot_data.dropna(subset=[x_col]).set_index(x_col)
+                st.line_chart(plot_data)
+            else:
+                st.line_chart(numeric_df)
     else:
         st.write("No data uploaded.")
-        
-    st.markdown("---")
-    st.markdown(f"*Mentor Status:* {st.session_state['mentor_status']}")
-    st.markdown(f"*Mentor Comments:* {st.session_state['mentor_comments']}")
 # ==============================================================================
     # EXPORT / SAVE REPORT FEATURE
     # ==============================================================================
