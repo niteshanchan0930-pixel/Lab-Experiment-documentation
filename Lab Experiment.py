@@ -96,38 +96,60 @@ if page == "1. Protocol & Systematic Literature Search":
 elif page == "2. Results & Data Upload":
     st.header("📊 Results & Data Upload")
     
-    uploaded_file = st.file_uploader("Upload Experimental Data (Excel or CSV)", type=["csv", "xlsx"])
+    # File uploader widget
+    uploaded_file = st.file_uploader("Upload Custom Experimental Data (Excel or CSV)", type=["csv", "xlsx"])
     
+    # DEFAULT FILE NAME (Must match the exact filename committed to your GitHub repo)
+    DEFAULT_EXCEL_FILE = "Diclofenac_Sodium_SR_Dissolution_Clean.xlsx"
+
+    # --------------------------------------------------------------------------
+    # 1. CASE A: User uploads a custom file via the uploader widget
+    # --------------------------------------------------------------------------
     if uploaded_file is not None:
         try:
-            if uploaded_file.name.endswith(".csv"):
-                df = pd.read_csv(uploaded_file)
+            if uploaded_file.name.endswith(".xlsx"):
+                xls = pd.ExcelFile(uploaded_file)
+                # Auto-detect clean summary sheet if available
+                sheet_to_load = "Summary_Data" if "Summary_Data" in xls.sheet_names else 0
+                df = pd.read_excel(uploaded_file, sheet_name=sheet_to_load)
             else:
-                df = pd.read_excel(uploaded_file)
+                df = pd.read_csv(uploaded_file)
             
             st.session_state["results_df"] = df
-            st.success("File uploaded successfully!")
+            st.success("Custom file uploaded successfully!")
         except Exception as e:
-            st.error(f"Error reading file: {e}")
+            st.error(f"Error reading uploaded file: {e}")
 
-    # --- PASTE THE CLEAN PLOTTING CODE HERE ---
+    # --------------------------------------------------------------------------
+    # 2. CASE B: Auto-load default dataset from GitHub repository if no file is uploaded
+    # --------------------------------------------------------------------------
+    elif "results_df" not in st.session_state or st.session_state["results_df"] is None:
+        try:
+            xls = pd.ExcelFile(DEFAULT_EXCEL_FILE)
+            sheet_to_load = "Summary_Data" if "Summary_Data" in xls.sheet_names else 0
+            df_default = pd.read_excel(DEFAULT_EXCEL_FILE, sheet_name=sheet_to_load)
+            
+            st.session_state["results_df"] = df_default
+            st.info("ℹ️ Loaded default dataset: Diclofenac Sodium SR Dissolution Profile")
+        except Exception as e:
+            st.warning("No default dataset found in repository. Please upload an Excel/CSV file above.")
+
+    # --------------------------------------------------------------------------
+    # 3. DISPLAY TABLE AND PLOT CHART
+    # --------------------------------------------------------------------------
     if "results_df" in st.session_state and st.session_state["results_df"] is not None:
         df = st.session_state["results_df"].copy()
         
-        # Display Raw Data Frame
-        st.subheader("📋 Uploaded Data Table")
+        st.subheader("📋 Experimental Data Table")
         st.dataframe(df, use_container_width=True)
         
-        # 1. Clean the dataframe: drop completely empty rows and columns
+        # Clean dataframe for plotting
         df_clean = df.dropna(how="all").dropna(axis=1, how="all")
-        
-        # 2. Extract only numeric columns for plotting
         numeric_df = df_clean.select_dtypes(include=["number"])
         
         if not numeric_df.empty:
-            st.subheader("📈 Dissolution / Calibration Curve")
+            st.subheader("📈 Interactive Dissolution / Calibration Curve")
             
-            # If the original dataframe has a time or concentration column, use it as X-axis
             possible_x = [col for col in df_clean.columns if any(k in str(col).lower() for k in ["time", "conc", "min", "hr", "ug"])]
             
             if possible_x:
@@ -139,9 +161,7 @@ elif page == "2. Results & Data Upload":
             else:
                 st.line_chart(numeric_df)
         else:
-            st.warning("No numeric data columns found in the uploaded file to render a chart.")
-    else:
-        st.info("No experimental data uploaded yet.")
+            st.warning("No numeric data columns found to render a chart.")
 # ==========================================
 # SECTION 3: CHECKER / MENTOR
 # ==========================================
