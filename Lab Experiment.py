@@ -90,36 +90,52 @@ if page == "1. Protocol & Systematic Literature Search":
     st.subheader("Method / Methodology")
     st.session_state["method"] = st.text_area("Step-by-Step Procedure", value=st.session_state["method"], height=120)
 
-# ==========================================
+# ==============================================================================
 # SECTION 2: RESULTS & DATA UPLOAD
-# ==========================================
+# ==============================================================================
 elif page == "2. Results & Data Upload":
-    st.header("📊 Results & Data Upload (Word / Excel)")
+    st.header("📊 Results & Data Upload")
     
-    uploaded_file = st.file_uploader("Upload Experimental Data (Excel .xlsx, CSV, or Word .docx)", type=["xlsx", "csv", "docx"])
+    uploaded_file = st.file_uploader("Upload Experimental Data (Excel or CSV)", type=["csv", "xlsx"])
     
     if uploaded_file is not None:
-        if uploaded_file.name.endswith(".csv"):
-            df = pd.read_csv(uploaded_file)
+        try:
+            if uploaded_file.name.endswith(".csv"):
+                df = pd.read_csv(uploaded_file)
+            else:
+                df = pd.read_excel(uploaded_file)
+            
+            # Save raw dataframe to session state
             st.session_state["results_df"] = df
-            st.success("CSV file successfully loaded!")
-            st.dataframe(df)
-        elif uploaded_file.name.endswith(".xlsx"):
-            df = pd.read_excel(uploaded_file)
-            st.session_state["results_df"] = df
-            st.success("Excel file successfully loaded!")
-            st.dataframe(df)
-        else:
-            st.info("Word document (.docx) attached. File uploaded successfully for evaluation.")
-    else:
-        st.info("No file uploaded yet. You can manually edit the sample dataset below:")
-        sample_data = pd.DataFrame({
-            "Time (hr)": [1, 2, 4, 6, 8, 10, 12],
-            "% Drug Released": [15.0, 32.0, 58.0, 81.0, 105.0, 122.0, 138.0]
-        })
-        edited_df = st.data_editor(sample_data, num_rows="dynamic")
-        st.session_state["results_df"] = edited_df
+            st.success("File uploaded successfully!")
+        except Exception as e:
+            st.error(f"Error reading file: {e}")
 
+    # Display Data & Plot Chart
+    if "results_df" in st.session_state:
+        df = st.session_state["results_df"]
+        
+        st.subheader("📋 Uploaded Data Table")
+        st.dataframe(df, use_container_width=True)
+        
+        st.subheader("📈 Interactive Release / Calibration Curve")
+        
+        # Filter for numeric-only columns to avoid Streamlit plot crashes
+        numeric_cols = df.select_dtypes(include=['float64', 'int64']).columns.tolist()
+        
+        if len(numeric_cols) >= 2:
+            x_axis = st.selectbox("Select X-Axis (e.g., Time / Concentration):", numeric_cols, index=0)
+            y_axis = st.selectbox("Select Y-Axis (e.g., % Release / Absorbance):", numeric_cols, index=min(1, len(numeric_cols)-1))
+            
+            # Clean data: drop rows where selected X or Y values are missing
+            chart_data = df[[x_axis, y_axis]].dropna().set_index(x_axis)
+            st.line_chart(chart_data)
+        elif len(numeric_cols) == 1:
+            st.line_chart(df[numeric_cols].dropna())
+        else:
+            st.warning("No pure numeric columns detected in the uploaded file to generate a chart. Please check your Excel formatting.")
+    else:
+        st.info("No data file uploaded yet.")
 # ==========================================
 # SECTION 3: CHECKER / MENTOR
 # ==========================================
